@@ -319,6 +319,8 @@ body{
 </head>
 <body>
 
+<body>
+
 <div class="container">
 
     <div class="header">
@@ -337,6 +339,8 @@ body{
 
     </div>
 
+    <!-- DASHBOARD STATS -->
+
     <div class="stats-grid">
 
         <div class="stat-card">
@@ -344,9 +348,7 @@ body{
             <small>Monthly Income</small>
 
             <h2 id="monthlyIncome">
-
-                $0
-
+                $0.00
             </h2>
 
         </div>
@@ -356,9 +358,7 @@ body{
             <small>Monthly Spending</small>
 
             <h2 id="monthlySpending">
-
-                $0
-
+                $0.00
             </h2>
 
         </div>
@@ -368,9 +368,7 @@ body{
             <small>Remaining Budget</small>
 
             <h2 id="remainingBudget">
-
-                $0
-
+                $0.00
             </h2>
 
         </div>
@@ -380,14 +378,52 @@ body{
             <small>Accounts</small>
 
             <h2 id="accountCount">
-
                 0
-
             </h2>
 
         </div>
 
     </div>
+
+    <!-- ACTION BUTTONS -->
+
+    <div class="action-bar">
+
+        <button
+            class="action-btn"
+            onclick="showAddAccountModal()">
+
+            🏦 Account
+
+        </button>
+
+        <button
+            class="action-btn"
+            onclick="showAddTransactionModal()">
+
+            💳 Transaction
+
+        </button>
+
+        <button
+            class="action-btn"
+            onclick="showAddBudgetModal()">
+
+            📋 Budget
+
+        </button>
+
+        <button
+            class="action-btn"
+            onclick="showAddBillModal()">
+
+            🔁 Bill
+
+        </button>
+
+    </div>
+
+    <!-- NAVIGATION -->
 
     <div class="money-nav">
 
@@ -417,34 +453,23 @@ body{
 
     </div>
 
+    <!-- ROW 1 -->
+
     <div class="grid">
 
         <div class="card">
 
             <h2 class="section-title">
-
                 🏦 Accounts
-
             </h2>
 
-            <div class="list-item">
+            <div id="accountsList">
 
-                Checking
-                • $2,450
+                <div class="list-item">
 
-            </div>
+                    No accounts yet.
 
-            <div class="list-item">
-
-                Savings
-                • $7,820
-
-            </div>
-
-            <div class="list-item">
-
-                Visa
-                • -$432
+                </div>
 
             </div>
 
@@ -453,38 +478,24 @@ body{
         <div class="card">
 
             <h2 class="section-title">
-
                 🔁 Upcoming Bills
-
             </h2>
 
-            <div class="list-item">
+            <div id="billsList">
 
-                Netflix
-                • $24
-                • Nov 5
+                <div class="list-item">
 
-            </div>
+                    No recurring bills.
 
-            <div class="list-item">
-
-                Telus
-                • $95
-                • Nov 22
-
-            </div>
-
-            <div class="list-item">
-
-                BC Hydro
-                • $140
-                • Nov 15
+                </div>
 
             </div>
 
         </div>
 
     </div>
+
+    <!-- ROW 2 -->
 
     <div class="grid">
 
@@ -496,27 +507,13 @@ body{
 
             </h2>
 
-            <div class="list-item">
+            <div id="budgetList">
 
-                Groceries
-                • Budget $500
-                • Spent $230
+                <div class="list-item">
 
-            </div>
+                    No budget categories.
 
-            <div class="list-item">
-
-                Fuel
-                • Budget $250
-                • Spent $105
-
-            </div>
-
-            <div class="list-item">
-
-                Dining
-                • Budget $150
-                • Spent $42
+                </div>
 
             </div>
 
@@ -530,24 +527,13 @@ body{
 
             </h2>
 
-            <div class="list-item">
+            <div id="transactionsList">
 
-                Costco
-                • -$145
+                <div class="list-item">
 
-            </div>
+                    No transactions.
 
-            <div class="list-item">
-
-                Paycheque
-                • +$2,631
-
-            </div>
-
-            <div class="list-item">
-
-                Petro Canada
-                • -$76
+                </div>
 
             </div>
 
@@ -556,6 +542,8 @@ body{
     </div>
 
 </div>
+
+<!-- MODAL -->
 
 <div
     id="modalOverlay"
@@ -566,7 +554,9 @@ body{
         <div class="modal-header">
 
             <h2 id="modalTitle">
+
                 Modal
+
             </h2>
 
             <button
@@ -586,7 +576,7 @@ body{
     </div>
 
 </div>
-    
+   
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="seshat-core.js"></script>
 <script src="app.js"></script>
