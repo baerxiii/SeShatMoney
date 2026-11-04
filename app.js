@@ -162,3 +162,79 @@ document.addEventListener(
 
     }
 );
+
+/*
+===================================
+Modal System
+===================================
+*/
+
+function openModal(
+    title,
+    content
+){
+
+    document.getElementById(
+        "modalTitle"
+    ).innerHTML = title;
+
+    document.getElementById(
+        "modalContent"
+    ).innerHTML = content;
+
+    document.getElementById(
+        "modalOverlay"
+    ).style.display = "flex";
+}
+
+function closeModal(){
+
+    document.getElementById(
+        "modalOverlay"
+    ).style.display = "none";
+}
+
+/*
+===================================
+Add Account
+===================================
+*/
+
+function showAddAccountModal(){
+
+    openModal(
+
+        "🏦 Add Account",
+
+        `
+        <input
+            id="accountName"
+            placeholder="Account Name">
+
+        <br><br>
+
+        <input
+            id="accountBalance"
+            type="number"
+            placeholder="Opening Balance">
+
+        <br><br>
+
+        <button
+            onclick="saveAccount()">
+
+            Save Account
+
+        </button>
+        `
+    );
+}
+
+function saveAccount(){
+
+    alert(
+        "Account Save Working!"
+    );
+
+    closeModal();
+}
