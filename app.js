@@ -338,29 +338,36 @@ function showAddAccountModal(){
             id="accountType">
 
             <option>
+    Checking
+</option>
 
-                Checking
+<option>
+    Savings
+</option>
 
-            </option>
+<option>
+    Credit Card
+</option>
 
-            <option>
+<option>
+    Line of Credit
+</option>
 
-                Savings
+<option>
+    Loan
+</option>
 
-            </option>
+<option>
+    Mortgage
+</option>
 
-            <option>
+<option>
+    Investment
+</option>
 
-                Credit Card
-
-            </option>
-
-            <option>
-
-                Cash
-
-            </option>
-
+<option>
+    Cash
+</option>
         </select>
 
         <br><br>
