@@ -465,15 +465,511 @@ async function saveAccount(){
 
 /*
 =========================================
+Transactions
+=========================================
+*/
+
+async function loadTransactions(){
+
+    const user =
+        await getCurrentUser();
+
+    if(!user){
+        return;
+    }
+
+    const {
+        data,
+        error
+    } =
+    await getSB()
+        .from("money_transactions")
+        .select("*")
+        .eq(
+            "user_id",
+            user.id
+        )
+        .order(
+            "transaction_date",
+            {
+                ascending:false
+            }
+        );
+
+    if(error){
+
+        console.error(error);
+
+        return;
+    }
+
+    const container =
+        document.getElementById(
+            "transactionsList"
+        );
+
+    if(!container){
+        return;
+    }
+
+    container.innerHTML = "";
+
+    if(!data || !data.length){
+
+        container.innerHTML = `
+            <div class="list-item">
+                No transactions.
+            </div>
+        `;
+
+        return;
+    }
+
+    data.forEach(transaction=>{
+
+        const amount =
+            Number(
+                transaction.amount || 0
+            );
+
+        const color =
+            amount >= 0
+                ? "#22c55e"
+                : "#ef4444";
+
+        container.innerHTML += `
+
+        <div class="list-item">
+
+            <strong>
+                ${transaction.description}
+            </strong>
+
+            <br>
+
+            ${transaction.category || "Uncategorized"}
+
+            <br>
+
+            <span style="color:${color};">
+
+                $${amount.toFixed(2)}
+
+            </span>
+
+            <br>
+
+            ${transaction.transaction_date || ""}
+
+            <br><br>
+
+            <button
+                class="btn"
+                onclick="deleteTransaction(${transaction.id})">
+
+                Delete
+
+            </button>
+
+        </div>
+
+        `;
+    });
+
+}
+
+async function deleteTransaction(id){
+
+    if(
+        !confirm(
+            "Delete transaction?"
+        )
+    ){
+        return;
+    }
+
+    const {
+        error
+    } =
+    await getSB()
+        .from("money_transactions")
+        .delete()
+        .eq(
+            "id",
+            id
+        );
+
+    if(error){
+
+        alert(
+            error.message
+        );
+
+        return;
+    }
+
+    loadTransactions();
+
+    loadDashboard();
+
+}
+
+async function showAddTransactionModal(){
+
+    const user =
+        await getCurrentUser();
+
+    const {
+        data:accounts
+    } =
+    await getSB()
+        .from("money_accounts")
+        .select("*")
+        .eq(
+            "user_id",
+            user.id
+        );
+
+    let options = "";
+
+    accounts.forEach(account=>{
+
+        options += `
+            <option value="${account.id}">
+                ${account.name}
+            </option>
+        `;
+
+    });
+
+    openModal(
+
+        "💳 Add Transaction",
+
+        `
+
+        <input
+            id="transactionDescription"
+            placeholder="Description">
+
+        <br><br>
+
+        <input
+            id="transactionAmount"
+            type="number"
+            step="0.01"
+            placeholder="Amount">
+
+        <br><br>
+
+        <select
+            id="transactionCategory">
+
+            <option>Income</option>
+            <option>Groceries</option>
+            <option>Fuel</option>
+            <option>Dining</option>
+            <option>Utilities</option>
+            <option>Insurance</option>
+            <option>Entertainment</option>
+
+        </select>
+
+        <br><br>
+
+        <select
+            id="transactionAccount">
+
+            ${options}
+
+        </select>
+
+        <br><br>
+
+        <input
+            id="transactionDate"
+            type="date">
+
+        <br><br>
+
+        <button
+            class="btn"
+            onclick="saveTransaction()">
+
+            Save Transaction
+
+        </button>
+
+        `
+    );
+}
+
+async function saveTransaction(){
+
+    const user =
+        await getCurrentUser();
+
+    const description =
+        document
+            .getElementById(
+                "transactionDescription"
+            )
+            .value
+            .trim();
+
+    const amount =
+        Number(
+            document
+                .getElementById(
+                    "transactionAmount"
+                )
+                .value
+        );
+
+    const category =
+        document
+            .getElementById(
+                "transactionCategory"
+            )
+            .value;
+
+    const accountId =
+        document
+            .getElementById(
+                "transactionAccount"
+            )
+            .value;
+
+    const transactionDate =
+        document
+            .getElementById(
+                "transactionDate"
+            )
+            .value;
+
+    if(!description){
+
+        alert(
+            "Description required."
+        );
+
+        return;
+    }
+
+    const {
+        error
+    } =
+    await getSB()
+        .from("money_transactions")
+        .insert({
+
+            user_id:user.id,
+
+            account_id:accountId,
+
+            description,
+
+            amount,
+
+            category,
+
+            transaction_date:
+                transactionDate
+
+        });
+
+    if(error){
+
+        alert(
+            error.message
+        );
+
+        return;
+    }
+
+    closeModal();
+
+    loadTransactions();
+
+    loadDashboard();
+}
+
+/*
+=========================================
 Placeholders
 =========================================
 */
 
-function showAddTransactionModal(){
+async function showAddTransactionModal(){
 
-    alert(
-        "Transactions coming next."
+    const user =
+        await getCurrentUser();
+
+    const {
+        data:accounts
+    } =
+    await getSB()
+        .from("money_accounts")
+        .select("*")
+        .eq(
+            "user_id",
+            user.id
+        );
+
+    let options = "";
+
+    accounts.forEach(a=>{
+
+        options += `
+
+        <option value="${a.id}">
+
+            ${a.name}
+
+        </option>
+
+        `;
+
+    });
+
+    openModal(
+
+        "💳 Add Transaction",
+
+        `
+
+        <input
+            id="transactionDescription"
+            placeholder="Description">
+
+        <br><br>
+
+        <input
+            id="transactionAmount"
+            type="number"
+            step="0.01"
+            placeholder="Amount">
+
+        <br><br>
+
+        <select
+            id="transactionCategory">
+
+            <option>Income</option>
+            <option>Groceries</option>
+            <option>Fuel</option>
+            <option>Dining</option>
+            <option>Utilities</option>
+            <option>Insurance</option>
+            <option>Entertainment</option>
+
+        </select>
+
+        <br><br>
+
+        <select
+            id="transactionAccount">
+
+            ${options}
+
+        </select>
+
+        <br><br>
+
+        <input
+            id="transactionDate"
+            type="date">
+
+        <br><br>
+
+        <button
+            class="btn"
+            onclick="saveTransaction()">
+
+            Save Transaction
+
+        </button>
+
+        `
     );
+}
+
+async function saveTransaction(){
+
+    const user =
+        await getCurrentUser();
+
+    const description =
+        document
+        .getElementById(
+            "transactionDescription"
+        )
+        .value
+        .trim();
+
+    const amount =
+        Number(
+            document
+            .getElementById(
+                "transactionAmount"
+            )
+            .value
+        );
+
+    const category =
+        document
+        .getElementById(
+            "transactionCategory"
+        )
+        .value;
+
+    const accountId =
+        document
+        .getElementById(
+            "transactionAccount"
+        )
+        .value;
+
+    const transactionDate =
+        document
+        .getElementById(
+            "transactionDate"
+        )
+        .value;
+
+    if(!description){
+
+        alert(
+            "Description required."
+        );
+
+        return;
+    }
+
+    await getSB()
+        .from("money_transactions")
+        .insert({
+
+            user_id:user.id,
+
+            account_id:accountId,
+
+            description,
+
+            amount,
+
+            category,
+
+            transaction_date:
+                transactionDate
+
+        });
+
+    closeModal();
+
+    loadDashboard();
+
+    loadTransactions();
 }
 
 function showAddBudgetModal(){
@@ -509,6 +1005,8 @@ document.addEventListener(
         await loadDashboard();
 
         await loadAccounts();
+
+        await loadTransactions();
 
         console.log(
             "Dashboard Loaded"
