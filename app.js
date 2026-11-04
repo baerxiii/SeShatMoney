@@ -1,7 +1,6 @@
 /*
 =========================================
 SeShat Money
-app.js
 =========================================
 */
 
@@ -49,9 +48,8 @@ async function checkSession(){
         document.body.innerHTML = `
 
         <div style="
-            padding:40px;
             color:white;
-            font-family:sans-serif;
+            padding:40px;
             text-align:center;">
 
             <h2>
@@ -78,123 +76,207 @@ Dashboard
 
 async function loadDashboard(){
 
-    try{
+    const user =
+        await getCurrentUser();
 
-        const user =
-            await getCurrentUser();
+    if(!user) return;
 
-        if(!user){
-
-            console.log(
-                "No authenticated user."
-            );
-
-            return;
-        }
-
-        console.log(
-            "Money User:",
-            user.email
-        );
-
-        /*
-        Accounts
-        */
-
-        const accountResult =
-            await getSB()
-                .from("money_accounts")
-                .select(
-                    "*",
-                    {
-                        count:"exact",
-                        head:true
-                    }
-                )
-                .eq(
-                    "user_id",
-                    user.id
-                );
-
-        document.getElementById(
-            "accountCount"
-        ).innerText =
-            accountResult.count || 0;
-
-        /*
-        Transactions
-        */
-
-        const {
-            data:transactions,
-            error:transactionError
-        } =
-        await getSB()
-            .from("money_transactions")
-            .select("*")
-            .eq(
-                "user_id",
-                user.id
-            );
-
-        if(transactionError){
-
-            console.error(
-                transactionError
-            );
-
-            return;
-        }
-
-        let income = 0;
-
-        let spending = 0;
-
-        transactions.forEach(t=>{
-
-            const amount =
-                Number(
-                    t.amount || 0
-                );
-
-            if(amount > 0){
-
-                income += amount;
-
-            }else{
-
-                spending +=
-                    Math.abs(amount);
+    const {
+        count
+    } =
+    await getSB()
+        .from("money_accounts")
+        .select(
+            "*",
+            {
+                count:"exact",
+                head:true
             }
-
-        });
-
-        document.getElementById(
-            "monthlyIncome"
-        ).innerText =
-            `$${income.toFixed(2)}`;
-
-        document.getElementById(
-            "monthlySpending"
-        ).innerText =
-            `$${spending.toFixed(2)}`;
-
-        document.getElementById(
-            "remainingBudget"
-        ).innerText =
-            `$${(income-spending).toFixed(2)}`;
-
-        console.log(
-            "Dashboard Loaded"
+        )
+        .eq(
+            "user_id",
+            user.id
         );
 
-    }catch(error){
+    document.getElementById(
+        "accountCount"
+    ).innerText =
+        count || 0;
 
-        console.error(
-            "Dashboard Error:",
-            error
+    const {
+        data:transactions
+    } =
+    await getSB()
+        .from("money_transactions")
+        .select("*")
+        .eq(
+            "user_id",
+            user.id
         );
+
+    let income = 0;
+    let spending = 0;
+
+    (transactions || []).forEach(t=>{
+
+        const amount =
+            Number(
+                t.amount || 0
+            );
+
+        if(amount > 0){
+
+            income += amount;
+
+        }else{
+
+            spending +=
+                Math.abs(
+                    amount
+                );
+        }
+
+    });
+
+    document.getElementById(
+        "monthlyIncome"
+    ).innerText =
+        `$${income.toFixed(2)}`;
+
+    document.getElementById(
+        "monthlySpending"
+    ).innerText =
+        `$${spending.toFixed(2)}`;
+
+    document.getElementById(
+        "remainingBudget"
+    ).innerText =
+        `$${(income-spending).toFixed(2)}`;
+}
+
+/*
+=========================================
+Accounts
+=========================================
+*/
+
+async function loadAccounts(){
+
+    const user =
+        await getCurrentUser();
+
+    if(!user) return;
+
+    const {
+        data,
+        error
+    } =
+    await getSB()
+        .from("money_accounts")
+        .select("*")
+        .eq(
+            "user_id",
+            user.id
+        )
+        .order("name");
+
+    if(error){
+
+        console.error(error);
+
+        return;
     }
+
+    const container =
+        document.getElementById(
+            "accountsList"
+        );
+
+    if(!container) return;
+
+    container.innerHTML = "";
+
+    if(!data.length){
+
+        container.innerHTML = `
+
+        <div class="list-item">
+
+            No accounts yet.
+
+        </div>
+
+        `;
+
+        return;
+    }
+
+    data.forEach(account=>{
+
+        container.innerHTML += `
+
+        <div class="list-item">
+
+            <strong>
+
+                ${account.name}
+
+            </strong>
+
+            <br>
+
+            ${account.type}
+
+            •
+
+            $${Number(
+                account.balance || 0
+            ).toFixed(2)}
+
+            <br><br>
+
+            <button
+                class="btn"
+                onclick="deleteAccount(${account.id})">
+
+                Delete
+
+            </button>
+
+        </div>
+
+        `;
+
+    });
+}
+
+/*
+=========================================
+Delete Account
+=========================================
+*/
+
+async function deleteAccount(id){
+
+    if(
+        !confirm(
+            "Delete account?"
+        )
+    ){
+        return;
+    }
+
+    await getSB()
+        .from("money_accounts")
+        .delete()
+        .eq(
+            "id",
+            id
+        );
+
+    loadAccounts();
+
+    loadDashboard();
 }
 
 /*
@@ -234,7 +316,7 @@ function closeModal(){
 
 /*
 =========================================
-Account Modal
+Add Account Modal
 =========================================
 */
 
@@ -255,13 +337,29 @@ function showAddAccountModal(){
         <select
             id="accountType">
 
-            <option>Checking</option>
+            <option>
 
-            <option>Savings</option>
+                Checking
 
-            <option>Credit Card</option>
+            </option>
 
-            <option>Cash</option>
+            <option>
+
+                Savings
+
+            </option>
+
+            <option>
+
+                Credit Card
+
+            </option>
+
+            <option>
+
+                Cash
+
+            </option>
 
         </select>
 
@@ -283,6 +381,7 @@ function showAddAccountModal(){
         </button>
 
         `
+
     );
 }
 
@@ -294,7 +393,7 @@ async function saveAccount(){
     if(!user){
 
         alert(
-            "Please sign into SeShat Hub first."
+            "Authentication required."
         );
 
         return;
@@ -303,7 +402,8 @@ async function saveAccount(){
     const name =
         document.getElementById(
             "accountName"
-        ).value.trim();
+        ).value
+        .trim();
 
     const type =
         document.getElementById(
@@ -320,7 +420,7 @@ async function saveAccount(){
     if(!name){
 
         alert(
-            "Account name required."
+            "Enter account name."
         );
 
         return;
@@ -345,6 +445,10 @@ async function saveAccount(){
 
     if(error){
 
+        console.error(
+            error
+        );
+
         alert(
             error.message
         );
@@ -354,53 +458,61 @@ async function saveAccount(){
 
     closeModal();
 
+    loadAccounts();
+
     loadDashboard();
 }
 
 /*
 =========================================
-Placeholder Functions
+Placeholders
 =========================================
 */
 
 function showAddTransactionModal(){
 
     alert(
-        "Transaction modal coming next."
+        "Transactions coming next."
     );
 }
 
 function showAddBudgetModal(){
 
     alert(
-        "Budget modal coming next."
+        "Budgets coming next."
     );
 }
 
 function showAddBillModal(){
 
     alert(
-        "Recurring bill modal coming next."
+        "Bills coming next."
     );
 }
 
 /*
 =========================================
-App Startup
+Startup
 =========================================
 */
 
 document.addEventListener(
     "DOMContentLoaded",
-    async () => {
+    async ()=>{
 
-        const validSession =
+        const valid =
             await checkSession();
 
-        if(!validSession)
+        if(!valid)
             return;
 
-        loadDashboard();
+        await loadDashboard();
+
+        await loadAccounts();
+
+        console.log(
+            "Dashboard Loaded"
+        );
 
     }
 );
