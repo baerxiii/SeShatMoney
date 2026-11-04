@@ -1,3 +1,3 @@
 # SeShatMoney
 Financial Tracking Application
-redeploy
+test
