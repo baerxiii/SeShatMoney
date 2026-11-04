@@ -5,13 +5,24 @@ app.js
 =========================================
 */
 
+function getSB(){
+
+    return window.seshat.supabase;
+}
+
+/*
+=========================================
+Authentication
+=========================================
+*/
+
 async function getCurrentUser(){
 
     const {
         data:{user},
         error
     } =
-    await window.moneySB
+    await getSB()
         .auth
         .getUser();
 
@@ -28,6 +39,43 @@ async function getCurrentUser(){
     return user;
 }
 
+async function checkSession(){
+
+    const user =
+        await getCurrentUser();
+
+    if(!user){
+
+        document.body.innerHTML = `
+
+        <div style="
+            padding:40px;
+            color:white;
+            font-family:sans-serif;
+            text-align:center;">
+
+            <h2>
+
+                Please sign into SeShat Hub first
+
+            </h2>
+
+        </div>
+
+        `;
+
+        return false;
+    }
+
+    return true;
+}
+
+/*
+=========================================
+Dashboard
+=========================================
+*/
+
 async function loadDashboard(){
 
     try{
@@ -38,7 +86,7 @@ async function loadDashboard(){
         if(!user){
 
             console.log(
-                "No authenticated user found."
+                "No authenticated user."
             );
 
             return;
@@ -50,13 +98,11 @@ async function loadDashboard(){
         );
 
         /*
-        =========================
         Accounts
-        =========================
         */
 
         const accountResult =
-            await window.moneySB
+            await getSB()
                 .from("money_accounts")
                 .select(
                     "*",
@@ -76,16 +122,14 @@ async function loadDashboard(){
             accountResult.count || 0;
 
         /*
-        =========================
         Transactions
-        =========================
         */
 
         const {
             data:transactions,
             error:transactionError
         } =
-        await window.moneySB
+        await getSB()
             .from("money_transactions")
             .select("*")
             .eq(
@@ -103,6 +147,7 @@ async function loadDashboard(){
         }
 
         let income = 0;
+
         let spending = 0;
 
         transactions.forEach(t=>{
@@ -119,9 +164,7 @@ async function loadDashboard(){
             }else{
 
                 spending +=
-                    Math.abs(
-                        amount
-                    );
+                    Math.abs(amount);
             }
 
         });
@@ -154,19 +197,10 @@ async function loadDashboard(){
     }
 }
 
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-
-        loadDashboard();
-
-    }
-);
-
 /*
-===================================
+=========================================
 Modal System
-===================================
+=========================================
 */
 
 function openModal(
@@ -176,28 +210,32 @@ function openModal(
 
     document.getElementById(
         "modalTitle"
-    ).innerHTML = title;
+    ).innerHTML =
+        title;
 
     document.getElementById(
         "modalContent"
-    ).innerHTML = content;
+    ).innerHTML =
+        content;
 
     document.getElementById(
         "modalOverlay"
-    ).style.display = "flex";
+    ).style.display =
+        "flex";
 }
 
 function closeModal(){
 
     document.getElementById(
         "modalOverlay"
-    ).style.display = "none";
+    ).style.display =
+        "none";
 }
 
 /*
-===================================
-Add Account
-===================================
+=========================================
+Account Modal
+=========================================
 */
 
 function showAddAccountModal(){
@@ -207,9 +245,25 @@ function showAddAccountModal(){
         "🏦 Add Account",
 
         `
+
         <input
             id="accountName"
             placeholder="Account Name">
+
+        <br><br>
+
+        <select
+            id="accountType">
+
+            <option>Checking</option>
+
+            <option>Savings</option>
+
+            <option>Credit Card</option>
+
+            <option>Cash</option>
+
+        </select>
 
         <br><br>
 
@@ -221,20 +275,132 @@ function showAddAccountModal(){
         <br><br>
 
         <button
+            class="btn"
             onclick="saveAccount()">
 
             Save Account
 
         </button>
+
         `
     );
 }
 
-function saveAccount(){
+async function saveAccount(){
 
-    alert(
-        "Account Save Working!"
-    );
+    const user =
+        await getCurrentUser();
+
+    if(!user){
+
+        alert(
+            "Please sign into SeShat Hub first."
+        );
+
+        return;
+    }
+
+    const name =
+        document.getElementById(
+            "accountName"
+        ).value.trim();
+
+    const type =
+        document.getElementById(
+            "accountType"
+        ).value;
+
+    const balance =
+        Number(
+            document.getElementById(
+                "accountBalance"
+            ).value || 0
+        );
+
+    if(!name){
+
+        alert(
+            "Account name required."
+        );
+
+        return;
+    }
+
+    const {
+        error
+    } =
+    await getSB()
+        .from("money_accounts")
+        .insert({
+
+            user_id:user.id,
+
+            name:name,
+
+            type:type,
+
+            balance:balance
+
+        });
+
+    if(error){
+
+        alert(
+            error.message
+        );
+
+        return;
+    }
 
     closeModal();
+
+    loadDashboard();
 }
+
+/*
+=========================================
+Placeholder Functions
+=========================================
+*/
+
+function showAddTransactionModal(){
+
+    alert(
+        "Transaction modal coming next."
+    );
+}
+
+function showAddBudgetModal(){
+
+    alert(
+        "Budget modal coming next."
+    );
+}
+
+function showAddBillModal(){
+
+    alert(
+        "Recurring bill modal coming next."
+    );
+}
+
+/*
+=========================================
+App Startup
+=========================================
+*/
+
+document.addEventListener(
+    "DOMContentLoaded",
+    async () => {
+
+        const validSession =
+            await checkSession();
+
+        if(!validSession)
+            return;
+
+        loadDashboard();
+
+    }
+);
