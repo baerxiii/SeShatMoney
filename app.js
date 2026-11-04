@@ -417,6 +417,17 @@ async function saveAccount(){
             ).value || 0
         );
 
+    let finalBalance = balance;
+
+if(
+    type === "Credit Card"
+){
+
+    finalBalance =
+        -Math.abs(balance);
+
+}
+
     if(!name){
 
         alert(
@@ -439,7 +450,7 @@ async function saveAccount(){
 
             type:type,
 
-            balance:balance
+            balance:finalBalance
 
         });
 
