@@ -881,9 +881,180 @@ Placeholders
 
 function showAddBudgetModal(){
 
-    alert(
-        "Budgets coming next."
+    openModal(
+
+        "📋 Add Budget Category",
+
+        `
+
+        <input
+            id="budgetName"
+            placeholder="Category Name">
+
+        <br><br>
+
+        <input
+            id="budgetAmount"
+            type="number"
+            step="0.01"
+            placeholder="Monthly Budget">
+
+        <br><br>
+
+        <button
+            class="btn"
+            onclick="saveBudgetCategory()">
+
+            Save Category
+
+        </button>
+
+        `
     );
+}
+
+async function saveBudgetCategory(){
+
+    const user =
+        await getCurrentUser();
+
+    const categoryName =
+        document
+            .getElementById(
+                "budgetName"
+            )
+            .value
+            .trim();
+
+    const monthlyBudget =
+        Number(
+            document
+                .getElementById(
+                    "budgetAmount"
+                )
+                .value || 0
+        );
+
+    if(!categoryName){
+
+        alert(
+            "Category name required."
+        );
+
+        return;
+    }
+
+    const {
+        error
+    } =
+    await getSB()
+        .from("budget_categories")
+        .insert({
+
+            user_id:user.id,
+
+            category_name:
+                categoryName,
+
+            monthly_budget:
+                monthlyBudget
+
+        });
+
+    if(error){
+
+        alert(
+            error.message
+        );
+
+        return;
+    }
+
+    closeModal();
+
+    loadBudgetCategories();
+}
+
+async function loadBudgetCategories(){
+
+    const user =
+        await getCurrentUser();
+
+    if(!user)
+        return;
+
+    const {
+        data,
+        error
+    } =
+    await getSB()
+        .from("budget_categories")
+        .select("*")
+        .eq(
+            "user_id",
+            user.id
+        )
+        .order(
+            "category_name"
+        );
+
+    if(error){
+
+        console.error(error);
+
+        return;
+    }
+
+    const container =
+        document.getElementById(
+            "budgetList"
+        );
+
+    if(!container)
+        return;
+
+    container.innerHTML = "";
+
+    if(!data.length){
+
+        container.innerHTML = `
+
+        <div class="list-item">
+
+            No budget categories.
+
+        </div>
+
+        `;
+
+        return;
+    }
+
+    data.forEach(category=>{
+
+        container.innerHTML += `
+
+        <div class="list-item">
+
+            <strong>
+
+                ${category.category_name}
+
+            </strong>
+
+            <br>
+
+            Budget:
+            $${Number(
+                category.monthly_budget || 0
+            ).toFixed(2)}
+
+        </div>
+
+        `;
+
+    });
+
 }
 
 function showAddBillModal(){
@@ -914,6 +1085,8 @@ document.addEventListener(
         await loadAccounts();
 
         await loadTransactions();
+
+        await loadBudgetCategories();
 
         console.log(
             "Dashboard Loaded"
