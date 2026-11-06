@@ -820,6 +820,21 @@ console.log("Amount:", amount);
     Number(amount)
 );
 
+    console.log(
+    "Old Balance:",
+    account.balance
+);
+
+console.log(
+    "Amount:",
+    amount
+);
+
+console.log(
+    "New Balance:",
+    newBalance
+);
+
 if(
     !accountError &&
     account
