@@ -648,6 +648,21 @@ async function showAddTransactionModal(){
             user.id
         );
 
+    async function showAddTransactionModal(){
+
+    ...
+}
+
+async function showTransferModal(){
+
+    ...
+}
+
+async function saveTransaction(){
+
+    ...
+}
+
     let options = "";
 
     accounts.forEach(account=>{
@@ -732,6 +747,176 @@ async function showAddTransactionModal(){
 
         `
     );
+}
+
+async function showTransferModal(){
+
+    const user =
+        await getCurrentUser();
+
+    const {
+        data:accounts
+    } =
+    await getSB()
+        .from("money_accounts")
+        .select("*")
+        .eq(
+            "user_id",
+            user.id
+        );
+
+    let options = "";
+
+    accounts.forEach(account=>{
+
+        options += `
+
+        <option value="${account.id}">
+
+            ${account.name}
+
+        </option>
+
+        `;
+
+    });
+
+    openModal(
+
+        "🔄 Transfer Funds",
+
+        `
+
+        <label>
+
+            From Account
+
+        </label>
+
+        <select id="fromAccount">
+
+            ${options}
+
+        </select>
+
+        <br><br>
+
+        <label>
+
+            To Account
+
+        </label>
+
+        <select id="toAccount">
+
+            ${options}
+
+        </select>
+
+        <br><br>
+
+        <input
+            id="transferAmount"
+            type="number"
+            step="0.01"
+            placeholder="Amount">
+
+        <br><br>
+
+        <button
+            class="btn"
+            onclick="saveTransfer()">
+
+            Transfer
+
+        </button>
+
+        `
+    );
+}
+
+async function saveTransfer(){
+
+    const amount =
+        Number(
+            document
+                .getElementById(
+                    "transferAmount"
+                )
+                .value
+        );
+
+    const fromAccount =
+        Number(
+            document
+                .getElementById(
+                    "fromAccount"
+                )
+                .value
+        );
+
+    const toAccount =
+        Number(
+            document
+                .getElementById(
+                    "toAccount"
+                )
+                .value
+        );
+
+    if(
+        !amount ||
+        fromAccount === toAccount
+    ){
+
+        alert(
+            "Invalid transfer."
+        );
+
+        return;
+    }
+
+    const {
+        data:from
+    } =
+    await getSB()
+        .from("money_accounts")
+        .select("*")
+        .eq("id",fromAccount)
+        .single();
+
+    const {
+        data:to
+    } =
+    await getSB()
+        .from("money_accounts")
+        .select("*")
+        .eq("id",toAccount)
+        .single();
+
+    await getSB()
+        .from("money_accounts")
+        .update({
+            balance:
+                Number(from.balance)
+                - amount
+        })
+        .eq("id",fromAccount);
+
+    await getSB()
+        .from("money_accounts")
+        .update({
+            balance:
+                Number(to.balance)
+                + amount
+        })
+        .eq("id",toAccount);
+
+    closeModal();
+
+    loadAccounts();
+
+    loadDashboard();
 }
 
 async function saveTransaction(){
