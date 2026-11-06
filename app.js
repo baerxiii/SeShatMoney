@@ -830,11 +830,6 @@ console.log(
     amount
 );
 
-console.log(
-    "New Balance:",
-    newBalance
-);
-
 if(
     !accountError &&
     account
