@@ -809,6 +809,17 @@ await getSB()
     )
     .single();
 
+    console.log("Account ID:", accountId);
+console.log("Account:", account);
+console.log("Amount:", amount);
+
+    console.log(
+    "New balance:",
+    Number(account.balance || 0)
+    +
+    Number(amount)
+);
+
 if(
     !accountError &&
     account
