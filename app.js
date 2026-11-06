@@ -796,6 +796,44 @@ async function saveTransaction(){
 
         });
 
+    const {
+    data:account,
+    error:accountError
+} =
+await getSB()
+    .from("money_accounts")
+    .select("*")
+    .eq(
+        "id",
+        accountId
+    )
+    .single();
+
+if(
+    !accountError &&
+    account
+){
+
+    const newBalance =
+        Number(
+            account.balance || 0
+        )
+        +
+        Number(amount);
+
+    await getSB()
+        .from("money_accounts")
+        .update({
+
+            balance:newBalance
+
+        })
+        .eq(
+            "id",
+            accountId
+        );
+}
+
     if(error){
 
         alert(
@@ -808,6 +846,8 @@ async function saveTransaction(){
     closeModal();
 
     loadTransactions();
+
+    loadAccounts();
 
     loadDashboard();
 }
