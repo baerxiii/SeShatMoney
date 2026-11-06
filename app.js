@@ -1066,8 +1066,6 @@ document.addEventListener(
 
         await loadTransactions();
 
-        await loadBudgetCategories();
-
         console.log(
             "Dashboard Loaded"
         );
