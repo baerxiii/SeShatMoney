@@ -681,17 +681,29 @@ async function showAddTransactionModal(){
         <br><br>
 
         <select
-            id="transactionCategory">
+    id="transactionType">
 
-            <option>Income</option>
-            <option>Groceries</option>
-            <option>Fuel</option>
-            <option>Dining</option>
-            <option>Utilities</option>
-            <option>Insurance</option>
-            <option>Entertainment</option>
+    <option>Income</option>
+    <option>Expense</option>
 
-        </select>
+</select>
+
+<br><br>
+
+<select
+    id="transactionCategory">
+
+    <option>Groceries</option>
+    <option>Fuel</option>
+    <option>Dining</option>
+    <option>Utilities</option>
+    <option>Insurance</option>
+    <option>Entertainment</option>
+    <option>Debt Payment</option>
+    <option>Savings</option>
+    <option>Other</option>
+
+</select>
 
         <br><br>
 
@@ -735,14 +747,34 @@ async function saveTransaction(){
             .value
             .trim();
 
-    const amount =
-        Number(
-            document
-                .getElementById(
-                    "transactionAmount"
-                )
-                .value
-        );
+    let amount =
+    Number(
+        document
+            .getElementById(
+                "transactionAmount"
+            )
+            .value
+    );
+
+const transactionType =
+    document
+        .getElementById(
+            "transactionType"
+        )
+        .value;
+
+if(
+    transactionType === "Income"
+){
+
+    amount =
+        Math.abs(amount);
+
+}else{
+
+    amount =
+        -Math.abs(amount);
+}
 
     const category =
         document
