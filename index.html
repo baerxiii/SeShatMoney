@@ -24,10 +24,14 @@ body{
         radial-gradient(circle at bottom right,#1e293b,#020617 70%);
 }
 
+button,input,select{
+    font:inherit;
+}
+
 .container{
     max-width:1400px;
     margin:auto;
-    padding:30px;
+    padding:clamp(18px,4vw,36px);
 }
 
 .header{
@@ -45,29 +49,43 @@ body{
 .stats-grid{
     display:grid;
     grid-template-columns:
-        repeat(auto-fit,minmax(250px,1fr));
-    gap:20px;
+        repeat(auto-fit,minmax(min(100%,230px),1fr));
+    gap:16px;
     margin-bottom:25px;
 }
 
   .stat-card{
 
-    background:
-        rgba(255,255,255,.08);
+    background:linear-gradient(145deg,rgba(30,58,138,.44),rgba(15,23,42,.82));
 
     border:
         1px solid rgba(255,255,255,.12);
 
-    border-radius:20px;
+    border-radius:18px;
 
-    padding:25px;
+    padding:22px;
+    box-shadow:0 12px 30px rgba(0,0,0,.14);
 }
 
 .stat-card h2{
+    margin-top:12px;
+    font-size:clamp(1.55rem,3vw,2rem);
+    letter-spacing:-.04em;
+}
 
-    margin-top:10px;
+.stat-card small{
+    color:#cbd5e1;
+    font-size:.8rem;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+}
 
-    font-size:2rem;
+.stat-card p{
+    min-height:1.2em;
+    margin-top:8px;
+    color:#aab8cf;
+    font-size:.82rem;
 }
 
 .money-nav{
@@ -107,15 +125,15 @@ body{
 
 .card{
 
-    background:
-        rgba(255,255,255,.08);
+    background:rgba(15,23,42,.72);
 
     border:
         1px solid rgba(255,255,255,.12);
 
-    border-radius:20px;
+    border-radius:18px;
 
-    padding:25px;
+    padding:clamp(18px,3vw,24px);
+    box-shadow:0 16px 36px rgba(0,0,0,.15);
 
     margin-bottom:20px;
 }
@@ -132,8 +150,8 @@ body{
 
 .list-item{
 
-    background:
-        rgba(255,255,255,.05);
+    background:rgba(255,255,255,.045);
+    border:1px solid rgba(255,255,255,.07);
 
     border-radius:12px;
 
@@ -160,6 +178,18 @@ body{
     color:white;
 
     background:#2563eb;
+    font-weight:700;
+    transition:background .16s ease,transform .16s ease;
+}
+
+.btn:hover,.action-btn:hover{
+    background:#1d4ed8;
+    transform:translateY(-1px);
+}
+
+button:focus-visible,input:focus-visible,select:focus-visible{
+    outline:3px solid #93c5fd;
+    outline-offset:2px;
 }
 
 @media(max-width:768px){
@@ -200,11 +230,11 @@ body{
     cursor:pointer;
 
     font-weight:600;
+    transition:background .16s ease,transform .16s ease;
 }
 
-.action-btn:hover{
-
-    background:#1d4ed8;
+.grid{
+    align-items:start;
 }
 
 .modal-overlay{
@@ -228,9 +258,10 @@ body{
 
     width:95%;
 
-    max-width:600px;
-
-    padding:25px;
+    max-width:560px;
+    max-height:calc(100vh - 32px);
+    overflow-y:auto;
+    padding:clamp(20px,4vw,28px);
 
     border-radius:20px;
 
@@ -274,9 +305,113 @@ body{
 
     margin-top:10px;
 
-    border:none;
+    border:1px solid rgba(255,255,255,.14);
 
     border-radius:10px;
+    background:#111c33;
+    color:white;
+}
+
+.modal label{
+    display:block;
+    margin:14px 0 0;
+    color:#cbd5e1;
+    font-size:.88rem;
+    font-weight:650;
+}
+
+.modal-actions{
+    display:flex;
+    justify-content:flex-end;
+    margin-top:22px;
+}
+
+.form-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+}
+
+.form-hint,.empty-state{
+    margin-top:12px;
+    color:#aab8cf;
+    line-height:1.5;
+}
+
+.account-item,.transaction-item,.budget-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+}
+
+.account-item>div:first-child,.transaction-copy{
+    min-width:0;
+    flex:1;
+}
+
+.account-item p,.transaction-copy p{
+    margin-top:5px;
+    color:#aab8cf;
+    font-size:.86rem;
+}
+
+.account-balance,.transaction-item>strong{
+    white-space:nowrap;
+}
+
+.amount-positive{color:#86efac;}
+.amount-negative{color:#fca5a5;}
+
+.item-actions{
+    display:flex;
+    flex-shrink:0;
+    gap:10px;
+}
+
+.text-button{
+    padding:5px 3px;
+    border:0;
+    background:none;
+    color:#93c5fd;
+    cursor:pointer;
+    font-weight:650;
+}
+
+.text-button:hover{text-decoration:underline;}
+.danger-button{color:#fca5a5;}
+
+.transaction-tools{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,.65fr) minmax(0,.55fr);
+    gap:10px;
+    margin:0 0 14px;
+}
+
+.transaction-tools input,.transaction-tools select{
+    width:100%;
+    min-width:0;
+    padding:10px 12px;
+    border:1px solid rgba(255,255,255,.15);
+    border-radius:10px;
+    background:#111c33;
+    color:white;
+}
+
+.auth-message{
+    max-width:680px;
+    margin:12vh auto;
+    padding:32px;
+    text-align:center;
+}
+.auth-message p{margin-top:12px;color:#cbd5e1;}
+
+@media(max-width:700px){
+    .transaction-tools{grid-template-columns:1fr;}
+    .transaction-item{flex-wrap:wrap;}
+    .transaction-item .transaction-copy{flex-basis:calc(100% - 110px);}
+    .account-item{flex-wrap:wrap;}
+    .account-item .item-actions{margin-left:auto;}
 }
     
 </style>
@@ -294,7 +429,7 @@ body{
             </div>
 
             <p>
-                Budgeting, Accounts, Bills and Spending
+                Your accounts, monthly plan, and spending at a glance
             </p>
 
         </div>
@@ -307,31 +442,34 @@ body{
 
         <div class="stat-card">
 
-            <small>Monthly Income</small>
+            <small>This Month · Income</small>
 
             <h2 id="monthlyIncome">
                 $0.00
             </h2>
+            <p>Income recorded this month</p>
 
         </div>
 
         <div class="stat-card">
 
-            <small>Monthly Spending</small>
+            <small>This Month · Spending</small>
 
             <h2 id="monthlySpending">
                 $0.00
             </h2>
+            <p>Expenses recorded this month</p>
 
         </div>
 
         <div class="stat-card">
 
-            <small>Remaining Budget</small>
+            <small>Budget Remaining</small>
 
             <h2 id="remainingBudget">
                 $0.00
             </h2>
+            <p id="budgetSummary">Loading your monthly plan…</p>
 
         </div>
 
@@ -383,14 +521,6 @@ body{
 
         </button>
 
-        <button
-            class="action-btn"
-            onclick="showAddBillModal()">
-
-            🔁 Bill
-
-        </button>
-
     </div>
 
        <!-- ROW 1 -->
@@ -408,24 +538,6 @@ body{
                 <div class="list-item">
 
                     No accounts yet.
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="card">
-
-            <h2 class="section-title">
-                🔁 Upcoming Bills
-            </h2>
-
-            <div id="billsList">
-
-                <div class="list-item">
-
-                    No recurring bills.
 
                 </div>
 
@@ -461,11 +573,17 @@ body{
 
         <div class="card">
 
-            <h2 class="section-title">
-
-                💳 Recent Transactions
-
-            </h2>
+            <h2 class="section-title">💳 Transactions</h2>
+            <div class="transaction-tools" role="search" aria-label="Filter transactions">
+                <input id="transactionSearch" type="search" placeholder="Search description…" aria-label="Search transactions">
+                <select id="transactionCategoryFilter" aria-label="Filter by category">
+                    <option value="">All categories</option>
+                </select>
+                <select id="transactionPeriodFilter" aria-label="Filter by period">
+                    <option value="month">This month</option>
+                    <option value="all">All time</option>
+                </select>
+            </div>
 
             <div id="transactionsList">
 
