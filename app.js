@@ -8,6 +8,9 @@ const TRANSACTION_CATEGORIES = [
 ];
 let transactions = [];
 let authRevision = 0;
+let editingAccount = null;
+let transferInProgress = false;
+let accountEditInProgress = false;
 const MONEY_SECTIONS = ["overview", "accounts", "transactions", "budgets", "transfers"];
 
 function selectSection(section, focus = false) {
@@ -61,6 +64,11 @@ function currency(value) {
         style: "currency",
         currency: "CAD"
     }).format(Number(value) || 0);
+}
+
+function validMoneyInput(value, allowNegative = false) {
+    return (allowNegative ? /^-?\d+(?:\.\d{1,2})?$/ : /^\d+(?:\.\d{1,2})?$/).test(value)
+        && Number.isFinite(Number(value));
 }
 
 function localDate(date = new Date()) {
@@ -179,7 +187,7 @@ function showSignedOut(message, isError = false) {
     document.getElementById("authPassword").value = "";
     document.getElementById("signedInEmail").textContent = "";
     transactions = [];
-    for (const id of ["accountsList", "budgetList", "transactionsList"]) {
+    for (const id of ["accountsList", "budgetList", "transactionsList", "activityList", "transferHistory"]) {
         document.getElementById(id).replaceChildren();
     }
     for (const id of ["monthlyIncome", "monthlySpending", "remainingBudget", "accountCount"]) {
@@ -315,10 +323,11 @@ async function loadAccounts() {
         balance.textContent = currency(account.balance);
         const actions = document.createElement("div");
         actions.className = "item-actions";
-        actions.appendChild(makeButton(
-            "Delete", "text-button danger-button",
-            () => deleteAccount(account.id), `Delete ${account.name}`
-        ));
+        actions.append(
+            makeButton("Edit", "text-button", () => showEditAccountModal(account), `Edit ${account.name}`),
+            makeButton("Delete", "text-button danger-button",
+                () => deleteAccount(account.id), `Delete ${account.name}`)
+        );
         item.append(name, description, balance, actions);
         container.appendChild(item);
     });
@@ -345,6 +354,55 @@ function openModal(title, content) {
 
 function closeModal() {
     document.getElementById("modalOverlay").style.display = "none";
+    editingAccount = null;
+}
+
+function showEditAccountModal(account) {
+    editingAccount = account;
+    const options = (ACCOUNT_TYPES.includes(account.type) ? "" :
+        '<option value="" selected disabled>Choose an account type</option>') + ACCOUNT_TYPES.map(type =>
+        `<option ${type === account.type ? "selected" : ""}>${escapeHTML(type)}</option>`).join("");
+    openModal("🏦 Edit Account", `
+        <label for="editAccountName">Account name</label>
+        <input id="editAccountName" maxlength="80" value="${escapeHTML(account.name)}">
+        <label for="editAccountType">Account type</label>
+        <select id="editAccountType">${options}</select>
+        <label for="editAccountBalance">Current balance</label>
+        <input id="editAccountBalance" type="number" step="0.01" value="${escapeHTML(account.balance ?? 0)}">
+        <p class="form-hint">Enter the actual balance. Use a negative balance for money owed. Changing the balance records an adjustment.</p>
+        <div class="modal-actions"><button class="btn" onclick="saveAccountEdit()">Save changes</button></div>
+    `);
+}
+
+async function saveAccountEdit() {
+    if (accountEditInProgress) return;
+    accountEditInProgress = true;
+    try {
+        if (!editingAccount) throw new Error("Open an account to edit it.");
+        const name = document.getElementById("editAccountName").value.trim();
+        const type = document.getElementById("editAccountType").value;
+        const input = document.getElementById("editAccountBalance").value.trim();
+        const balance = Number(input);
+        if (!name) throw new Error("Enter an account name.");
+        if (!ACCOUNT_TYPES.includes(type)) throw new Error("Choose a valid account type.");
+        if (!validMoneyInput(input, true)) {
+            throw new Error("Enter a valid balance with at most two decimal places.");
+        }
+        const { error } = await getSB().rpc("update_money_account", {
+            p_account_id: editingAccount.id,
+            p_name: name,
+            p_type: type,
+            p_balance: balance,
+            p_expected_balance: editingAccount.balance ?? 0
+        });
+        if (error) throw error;
+        closeModal();
+        await refreshDashboard();
+    } catch (error) {
+        showError(error);
+    } finally {
+        accountEditInProgress = false;
+    }
 }
 
 function showAddAccountModal() {
@@ -367,10 +425,10 @@ async function saveAccount() {
         if (!user) throw new Error("Authentication required.");
         const name = document.getElementById("accountName").value.trim();
         const type = document.getElementById("accountType").value;
-        const balanceInput = document.getElementById("accountBalance").value;
+        const balanceInput = document.getElementById("accountBalance").value.trim();
         const balance = Number(balanceInput);
         if (!name) throw new Error("Enter an account name.");
-        if (!Number.isFinite(balance)) throw new Error("Enter a valid opening balance.");
+        if (!validMoneyInput(balanceInput, true)) throw new Error("Enter an opening balance with at most two decimal places.");
         const { error } = await getSB().from("money_accounts").insert({
             user_id: user.id,
             name,
@@ -541,10 +599,10 @@ async function saveTransaction(transactionId = null) {
         const user = await getCurrentUser();
         if (!user) throw new Error("Authentication required.");
         const description = document.getElementById("transactionDescription").value.trim();
-        const amountInput = document.getElementById("transactionAmount").value;
+        const amountInput = document.getElementById("transactionAmount").value.trim();
         const amountValue = Number(amountInput);
         if (!description) throw new Error("Enter a transaction description.");
-        if (!Number.isFinite(amountValue) || amountValue <= 0) throw new Error("Enter an amount greater than zero.");
+        if (!validMoneyInput(amountInput) || amountValue <= 0) throw new Error("Enter an amount greater than zero with at most two decimal places.");
         const amount = document.getElementById("transactionType").value === "Income"
             ? amountValue : -amountValue;
         const transactionDate = document.getElementById("transactionDate").value;
@@ -585,11 +643,14 @@ async function showTransferModal() {
 }
 
 async function saveTransfer() {
+    if (transferInProgress) return;
+    transferInProgress = true;
     try {
         const fromAccount = Number(document.getElementById("fromAccount").value);
         const toAccount = Number(document.getElementById("toAccount").value);
-        const amount = Number(document.getElementById("transferAmount").value);
-        if (!Number.isFinite(amount) || amount <= 0) throw new Error("Enter an amount greater than zero.");
+        const amountInput = document.getElementById("transferAmount").value.trim();
+        const amount = Number(amountInput);
+        if (!validMoneyInput(amountInput) || amount <= 0) throw new Error("Enter an amount greater than zero with at most two decimal places.");
         if (fromAccount === toAccount) throw new Error("Choose two different accounts.");
         const { error } = await getSB().rpc("transfer_money_between_accounts", {
             p_from_account_id: fromAccount,
@@ -601,7 +662,70 @@ async function saveTransfer() {
         await refreshDashboard();
     } catch (error) {
         showError(error);
+    } finally {
+        transferInProgress = false;
     }
+}
+
+async function loadActivity() {
+    const revision = authRevision;
+    const user = await getCurrentUser();
+    if (!user) return;
+    const activity = [];
+    const pageSize = 500;
+    for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await getSB().from("money_activity")
+            .select("id,occurred_at,kind,description,amount,accounts")
+            .eq("user_id", user.id)
+            .order("occurred_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        if (revision !== authRevision) return;
+        activity.push(...data);
+        if (data.length < pageSize) break;
+    }
+    renderActivity("activityList", activity.filter(item => item.kind !== "transfer"));
+    renderActivity("transferHistory", activity.filter(item => item.kind === "transfer"));
+}
+
+function renderActivity(containerId, items) {
+    const container = document.getElementById(containerId);
+    container.replaceChildren();
+    if (!items.length) {
+        const empty = document.createElement("p");
+        empty.className = "empty-state";
+        empty.textContent = "No recorded history yet. History begins after the database update is installed.";
+        container.appendChild(empty);
+        return;
+    }
+    const labels = {
+        transfer: "Transfer",
+        adjustment: "Balance adjustment",
+        transaction_created: "Transaction created",
+        transaction_edited: "Transaction edited",
+        transaction_deleted: "Transaction deleted"
+    };
+    items.forEach(item => {
+        const entry = document.createElement("article");
+        entry.className = "list-item activity-item";
+        const title = document.createElement("strong");
+        const label = labels[item.kind] || item.kind;
+        title.textContent = item.description === label ? label : `${label}: ${item.description}`;
+        const details = document.createElement("p");
+        details.textContent = `${new Date(item.occurred_at).toLocaleString()} · ${
+            item.kind === "transaction_edited" ? "New transaction amount" :
+            item.kind === "transaction_deleted" ? "Reversed amount" : "Amount"
+        }: ${currency(item.amount)}`;
+        entry.append(title, details);
+        item.accounts.forEach(account => {
+            const balance = document.createElement("p");
+            const role = account.role === "source" ? "From " : account.role === "destination" ? "To " : "";
+            balance.textContent = `${role}${account.name}: ${currency(account.before)} → ${currency(account.after)}`;
+            entry.appendChild(balance);
+        });
+        container.appendChild(entry);
+    });
 }
 
 function showAddBudgetModal() {
@@ -701,7 +825,7 @@ async function loadBudgetCategories() {
 async function refreshDashboard() {
     const revision = authRevision;
     const results = await Promise.allSettled([
-        loadDashboard(), loadAccounts(), loadTransactions(), loadBudgetCategories()
+        loadDashboard(), loadAccounts(), loadTransactions(), loadBudgetCategories(), loadActivity()
     ]);
     if (revision !== authRevision) return;
     const failure = results.find(result => result.status === "rejected");

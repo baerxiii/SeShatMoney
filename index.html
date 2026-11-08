@@ -367,6 +367,9 @@ button:focus-visible,input:focus-visible,select:focus-visible{
     font-size:.86rem;
 }
 
+.activity-item p{margin-top:5px;color:#aab8cf;font-size:.86rem;}
+.history-heading{margin-top:24px;}
+
 .account-balance,.transaction-item>strong{
     white-space:nowrap;
 }
@@ -572,6 +575,12 @@ button:focus-visible,input:focus-visible,select:focus-visible{
 
             <div id="transactionsList"><p class="empty-state">Loading transactions…</p></div>
         </div>
+        <div class="card">
+            <div class="section-header">
+                <div><h2>Account activity</h2><p>Transaction changes and balance adjustments, with balances before and after each change.</p></div>
+            </div>
+            <div id="activityList"><p class="empty-state">Loading activity…</p></div>
+        </div>
     </section>
 
     <section id="panel-budgets" role="tabpanel" aria-labelledby="tab-budgets" tabindex="0" hidden>
@@ -591,6 +600,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{
                 <button type="button" class="action-btn" onclick="showTransferModal()">＋ Make a transfer</button>
             </div>
             <p class="form-hint">Transfers update both account balances together. They are not listed as income or spending.</p>
+            <h3 class="history-heading">Transfer history</h3>
+            <div id="transferHistory"><p class="empty-state">Loading transfers…</p></div>
         </div>
     </section>
     </main>
@@ -633,7 +644,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{
    
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="seshat-core.js"></script>
-<script src="app.js?v=4"></script>
+<script src="app.js?v=5"></script>
     
 </body>
 </html>
