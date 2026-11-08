@@ -7,8 +7,12 @@ const TRANSACTION_CATEGORIES = [
     "Entertainment", "Debt Payment", "Savings", "Other"
 ];
 let transactions = [];
+let authRevision = 0;
 
 function getSB() {
+    if (!window.seshat?.supabase) {
+        throw new Error("The sign-in service could not be loaded. Check your connection and reload.");
+    }
     return window.seshat.supabase;
 }
 
@@ -88,22 +92,100 @@ async function getCurrentUser() {
 }
 
 async function checkSession() {
+    const revision = ++authRevision;
+    const signInButton = document.getElementById("signInButton");
     try {
+        const { data: { session }, error } = await getSB().auth.getSession();
+        if (error) throw error;
+        if (!session) {
+            if (revision !== authRevision) return false;
+            showSignedOut("Sign in with your SeShat Hub account.");
+            return false;
+        }
         const user = await getCurrentUser();
-        if (user) return true;
+        if (revision !== authRevision) return false;
+        if (!user) {
+            showSignedOut("Your session has expired. Please sign in again.");
+            return false;
+        }
+        document.getElementById("authPassword").value = "";
+        document.getElementById("signedInEmail").textContent = user.email || "Signed in";
+        document.getElementById("authStatus").textContent = "Loading your dashboard…";
+        await refreshDashboard();
+        if (revision !== authRevision) return false;
+        document.getElementById("authScreen").hidden = true;
+        document.getElementById("moneyDashboard").hidden = false;
+        return true;
     } catch (error) {
+        if (revision !== authRevision) return false;
         console.error("Could not check the current session", error);
+        showSignedOut(`Could not check your session: ${error.message || "Please try again."}`, true);
+        return false;
+    } finally {
+        if (revision === authRevision) signInButton.disabled = false;
     }
+}
 
-    document.body.innerHTML = `
-        <main class="auth-message">
-            <h1>Please sign into SeShat Hub first</h1>
-            <p>Then open SeShat Money again from the Hub.</p>
-        </main>`;
-    return false;
+function showSignedOut(message, isError = false) {
+    document.getElementById("moneyDashboard").hidden = true;
+    document.getElementById("authScreen").hidden = false;
+    document.getElementById("authPassword").value = "";
+    document.getElementById("signedInEmail").textContent = "";
+    transactions = [];
+    for (const id of ["accountsList", "budgetList", "transactionsList"]) {
+        document.getElementById(id).replaceChildren();
+    }
+    for (const id of ["monthlyIncome", "monthlySpending", "remainingBudget", "accountCount"]) {
+        document.getElementById(id).textContent = "—";
+    }
+    document.getElementById("budgetSummary").textContent = "";
+    closeModal();
+    const status = document.getElementById("authStatus");
+    status.textContent = message;
+    status.classList.toggle("error", isError);
+}
+
+async function signIn(event) {
+    event.preventDefault();
+    const button = document.getElementById("signInButton");
+    const status = document.getElementById("authStatus");
+    button.disabled = true;
+    status.classList.toggle("error", false);
+    status.textContent = "Signing in…";
+    try {
+        const { error } = await getSB().auth.signInWithPassword({
+            email: document.getElementById("authEmail").value.trim(),
+            password: document.getElementById("authPassword").value
+        });
+        if (error) throw error;
+        document.getElementById("authPassword").value = "";
+        await checkSession();
+    } catch (error) {
+        console.error("Sign-in failed", error);
+        status.textContent = `Sign-in failed: ${error.message || "Please try again."}`;
+        status.classList.toggle("error", true);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function signOut() {
+    const button = document.getElementById("signOutButton");
+    button.disabled = true;
+    try {
+        const { error } = await getSB().auth.signOut({ scope: "local" });
+        if (error) throw error;
+        ++authRevision;
+        showSignedOut("Signed out. This also signs you out of SeShat Hub in this browser.");
+    } catch (error) {
+        showError(error);
+    } finally {
+        button.disabled = false;
+    }
 }
 
 async function loadDashboard() {
+    const revision = authRevision;
     const user = await getCurrentUser();
     if (!user) return;
 
@@ -126,6 +208,7 @@ async function loadDashboard() {
     for (const result of [accountResult, transactionResult, budgetResult]) {
         if (result.error) throw result.error;
     }
+    if (revision !== authRevision) return;
 
     const monthTransactions = transactionResult.data || [];
     const budgets = budgetResult.data || [];
@@ -151,6 +234,7 @@ function makeButton(text, className, handler, label) {
 }
 
 async function loadAccounts() {
+    const revision = authRevision;
     const user = await getCurrentUser();
     if (!user) return;
 
@@ -160,6 +244,7 @@ async function loadAccounts() {
         .eq("user_id", user.id)
         .order("name");
     if (error) throw error;
+    if (revision !== authRevision) return;
 
     const container = document.getElementById("accountsList");
     container.replaceChildren();
@@ -254,6 +339,7 @@ async function saveAccount() {
 }
 
 async function loadTransactions() {
+    const revision = authRevision;
     const user = await getCurrentUser();
     if (!user) return;
     const { data, error } = await getSB()
@@ -262,6 +348,7 @@ async function loadTransactions() {
         .eq("user_id", user.id)
         .order("transaction_date", { ascending: false });
     if (error) throw error;
+    if (revision !== authRevision) return;
     transactions = data || [];
     updateCategoryFilter();
     renderTransactions();
@@ -494,6 +581,7 @@ async function saveBudgetCategory() {
 }
 
 async function loadBudgetCategories() {
+    const revision = authRevision;
     const user = await getCurrentUser();
     if (!user) return;
     const { data, error } = await getSB().from("budget_categories")
@@ -501,6 +589,7 @@ async function loadBudgetCategories() {
         .eq("user_id", user.id)
         .order("category_name");
     if (error) throw error;
+    if (revision !== authRevision) return;
 
     const container = document.getElementById("budgetList");
     container.replaceChildren();
@@ -524,16 +613,20 @@ async function loadBudgetCategories() {
 }
 
 async function refreshDashboard() {
-    try {
-        await Promise.all([loadDashboard(), loadAccounts(), loadTransactions(), loadBudgetCategories()]);
-    } catch (error) {
-        showError(error);
+    const revision = authRevision;
+    const results = await Promise.allSettled([
+        loadDashboard(), loadAccounts(), loadTransactions(), loadBudgetCategories()
+    ]);
+    if (revision !== authRevision) return;
+    const failure = results.find(result => result.status === "rejected");
+    if (failure) {
+        showError(failure.reason);
     }
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-    if (!await checkSession()) return;
-    await refreshDashboard();
+    document.getElementById("signInForm").addEventListener("submit", signIn);
+    document.getElementById("signOutButton").addEventListener("click", signOut);
     document.getElementById("transactionSearch").addEventListener("input", renderTransactions);
     document.getElementById("transactionCategoryFilter").addEventListener("change", renderTransactions);
     document.getElementById("transactionPeriodFilter").addEventListener("change", renderTransactions);
@@ -543,4 +636,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.addEventListener("keydown", event => {
         if (event.key === "Escape") closeModal();
     });
+    try {
+        getSB().auth.onAuthStateChange(event => {
+            if (event === "SIGNED_OUT") {
+                ++authRevision;
+                showSignedOut("Your session ended. Sign in to continue.");
+                document.getElementById("signInButton").disabled = false;
+            } else if (event === "SIGNED_IN") {
+                ++authRevision;
+                showSignedOut("Checking your session…");
+                setTimeout(() => { checkSession(); }, 0);
+            }
+        });
+    } catch (error) {
+        console.error("Could not subscribe to session changes", error);
+    }
+    await checkSession();
 });

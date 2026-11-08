@@ -399,12 +399,28 @@ button:focus-visible,input:focus-visible,select:focus-visible{
 }
 
 .auth-message{
-    max-width:680px;
+    max-width:480px;
     margin:12vh auto;
     padding:32px;
-    text-align:center;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:20px;
+    background:rgba(15,23,42,.9);
+    box-shadow:0 16px 36px rgba(0,0,0,.2);
 }
-.auth-message p{margin-top:12px;color:#cbd5e1;}
+.auth-message p{margin-top:12px;color:#cbd5e1;line-height:1.5;}
+.auth-message label{display:block;margin-top:18px;color:#cbd5e1;font-weight:650;}
+.auth-message input{
+    display:block;width:100%;margin-top:8px;padding:12px;
+    border:1px solid rgba(255,255,255,.15);border-radius:10px;
+    background:#111c33;color:white;
+}
+.auth-message button{width:100%;margin-top:20px;}
+.auth-message a{color:#93c5fd;}
+.auth-status{min-height:1.5em;}
+.auth-status.error{color:#fca5a5;}
+.session-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.session-controls span{color:#cbd5e1;overflow-wrap:anywhere;}
+[hidden]{display:none !important;}
 
 @media(max-width:700px){
     .transaction-tools{grid-template-columns:1fr;}
@@ -418,7 +434,21 @@ button:focus-visible,input:focus-visible,select:focus-visible{
 </head>
 <body>
 
-<div class="container">
+<main id="authScreen" class="auth-message">
+    <h1>💰 SeShat Money</h1>
+    <p>Use your SeShat Hub account to sign in. If you’re already signed in to the Hub in this browser, your session is shared automatically.</p>
+    <p id="authStatus" class="auth-status" role="status" aria-live="polite">Checking your session…</p>
+    <form id="signInForm" onsubmit="event.preventDefault()">
+        <label for="authEmail">Email</label>
+        <input id="authEmail" type="email" autocomplete="username" required>
+        <label for="authPassword">Password</label>
+        <input id="authPassword" type="password" autocomplete="current-password" required>
+        <button id="signInButton" class="btn" type="submit" disabled>Sign in</button>
+    </form>
+    <p><a href="https://baerxiii.github.io/SeShatHub/">Open SeShat Hub</a></p>
+</main>
+
+<div id="moneyDashboard" class="container" hidden>
 
     <div class="header">
 
@@ -426,6 +456,11 @@ button:focus-visible,input:focus-visible,select:focus-visible{
 
             <div class="logo">
                 💰 SeShat Money
+            </div>
+
+            <div class="session-controls">
+                <span id="signedInEmail"></span>
+                <button type="button" class="btn" id="signOutButton">Sign out</button>
             </div>
 
             <p>
@@ -637,7 +672,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{
    
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="seshat-core.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=2"></script>
     
 </body>
 </html>
