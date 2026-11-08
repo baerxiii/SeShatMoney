@@ -648,21 +648,6 @@ async function showAddTransactionModal(){
             user.id
         );
 
-    async function showAddTransactionModal(){
-
-    ...
-}
-
-async function showTransferModal(){
-
-    ...
-}
-
-async function saveTransaction(){
-
-    ...
-}
-
     let options = "";
 
     accounts.forEach(account=>{
