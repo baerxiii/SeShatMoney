@@ -8,6 +8,36 @@ const TRANSACTION_CATEGORIES = [
 ];
 let transactions = [];
 let authRevision = 0;
+const MONEY_SECTIONS = ["overview", "accounts", "transactions", "budgets", "transfers"];
+
+function selectSection(section, focus = false) {
+    if (!MONEY_SECTIONS.includes(section)) throw new Error("Unknown Money section.");
+    MONEY_SECTIONS.forEach(name => {
+        const selected = name === section;
+        const tab = document.getElementById(`tab-${name}`);
+        tab.setAttribute("aria-selected", String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+        document.getElementById(`panel-${name}`).hidden = !selected;
+    });
+    if (focus) document.getElementById(`tab-${section}`).focus();
+}
+
+function initializeSections() {
+    MONEY_SECTIONS.forEach((section, index) => {
+        const tab = document.getElementById(`tab-${section}`);
+        tab.addEventListener("click", () => selectSection(section));
+        tab.addEventListener("keydown", event => {
+            let target;
+            if (event.key === "ArrowRight") target = (index + 1) % MONEY_SECTIONS.length;
+            else if (event.key === "ArrowLeft") target = (index - 1 + MONEY_SECTIONS.length) % MONEY_SECTIONS.length;
+            else if (event.key === "Home") target = 0;
+            else if (event.key === "End") target = MONEY_SECTIONS.length - 1;
+            else return;
+            event.preventDefault();
+            selectSection(MONEY_SECTIONS[target], true);
+        });
+    });
+}
 
 function getSB() {
     if (!window.seshat?.supabase) {
@@ -681,6 +711,7 @@ async function refreshDashboard() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+    initializeSections();
     document.getElementById("signInForm").addEventListener("submit", signIn);
     document.getElementById("signOutButton").addEventListener("click", signOut);
     document.getElementById("transactionSearch").addEventListener("input", renderTransactions);

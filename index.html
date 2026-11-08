@@ -89,39 +89,42 @@ button,input,select{
 }
 
 .money-nav{
-
     display:flex;
-
     flex-wrap:wrap;
-
-    gap:10px;
-
-    margin-bottom:25px;
+    gap:8px;
+    margin-bottom:26px;
+    padding:8px;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;
+    background:rgba(15,23,42,.72);
 }
-
 .money-tab{
-
-    border:none;
-
-    border-radius:12px;
-
-    padding:12px 18px;
-
+    flex:1 1 auto;
+    border:1px solid transparent;
+    border-radius:10px;
+    padding:12px 16px;
     cursor:pointer;
-
+    color:#cbd5e1;
+    background:transparent;
+    font-weight:650;
+}
+.money-tab:hover{background:rgba(255,255,255,.08);color:white;}
+.money-tab[aria-selected="true"]{
     color:white;
-
-    background:
-        rgba(255,255,255,.08);
-
-    border:
-        1px solid rgba(255,255,255,.12);
-}
-
-.money-tab.active{
-
     background:#2563eb;
+    border-color:rgba(147,197,253,.4);
 }
+.section-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:16px;
+    margin-bottom:20px;
+}
+.section-header h2{margin:0;}
+.section-header p,.overview-intro{margin-top:7px;color:#cbd5e1;line-height:1.5;}
+.overview-intro{margin:0 0 20px;}
 
 .card{
 
@@ -479,8 +482,18 @@ button:focus-visible,input:focus-visible,select:focus-visible{
 
     </div>
 
-    <!-- DASHBOARD STATS -->
+    <nav class="money-nav" role="tablist" aria-label="Money sections">
+        <button type="button" class="money-tab" id="tab-overview" role="tab" aria-selected="true" aria-controls="panel-overview" tabindex="0">Dashboard</button>
+        <button type="button" class="money-tab" id="tab-accounts" role="tab" aria-selected="false" aria-controls="panel-accounts" tabindex="-1">Accounts</button>
+        <button type="button" class="money-tab" id="tab-transactions" role="tab" aria-selected="false" aria-controls="panel-transactions" tabindex="-1">Transactions</button>
+        <button type="button" class="money-tab" id="tab-budgets" role="tab" aria-selected="false" aria-controls="panel-budgets" tabindex="-1">Budgets</button>
+        <button type="button" class="money-tab" id="tab-transfers" role="tab" aria-selected="false" aria-controls="panel-transfers" tabindex="-1">Transfers</button>
+    </nav>
 
+    <main>
+    <section id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
+    <h2 class="section-title">Your dashboard</h2>
+    <p class="overview-intro">A quick look at your finances this month. Choose a section above to manage the details.</p>
     <div class="stats-grid">
 
         <div class="stat-card">
@@ -528,95 +541,24 @@ button:focus-visible,input:focus-visible,select:focus-visible{
 
     </div>
 
-    <!-- ACTION BUTTONS -->
+    </section>
 
-    <div class="action-bar">
-
-        <button
-            class="action-btn"
-            onclick="showAddAccountModal()">
-
-            🏦 Account
-
-        </button>
-
-        <button
-            class="action-btn"
-            onclick="showAddTransactionModal()">
-
-            💳 Transaction
-
-        </button>
-
-        <button
-    class="action-btn"
-    onclick="showTransferModal()">
-
-    🔄 Transfer
-
-</button>
-
-        <button
-            class="action-btn"
-            onclick="showAddBudgetModal()">
-
-            📋 Budget
-
-        </button>
-
-    </div>
-
-       <!-- ROW 1 -->
-
-    <div class="grid">
-
+    <section id="panel-accounts" role="tabpanel" aria-labelledby="tab-accounts" tabindex="0" hidden>
         <div class="card">
-
-            <h2 class="section-title">
-                🏦 Accounts
-            </h2>
-
-            <div id="accountsList">
-
-                <div class="list-item">
-
-                    No accounts yet.
-
-                </div>
-
+            <div class="section-header">
+                <div><h2>🏦 Accounts</h2><p>Manage your account balances.</p></div>
+                <button type="button" class="action-btn" onclick="showAddAccountModal()">＋ Add account</button>
             </div>
-
+            <div id="accountsList"><p class="empty-state">Loading accounts…</p></div>
         </div>
+    </section>
 
-    </div>
-
-    <!-- ROW 2 -->
-
-    <div class="grid">
-
+    <section id="panel-transactions" role="tabpanel" aria-labelledby="tab-transactions" tabindex="0" hidden>
         <div class="card">
-
-            <h2 class="section-title">
-
-                📋 Budget Categories
-
-            </h2>
-
-            <div id="budgetList">
-
-                <div class="list-item">
-
-                    No budget categories.
-
-                </div>
-
+            <div class="section-header">
+                <div><h2>💳 Transactions</h2><p>Review and manage income and expenses.</p></div>
+                <button type="button" class="action-btn" onclick="showAddTransactionModal()">＋ Add transaction</button>
             </div>
-
-        </div>
-
-        <div class="card">
-
-            <h2 class="section-title">💳 Transactions</h2>
             <div class="transaction-tools" role="search" aria-label="Filter transactions">
                 <input id="transactionSearch" type="search" placeholder="Search description…" aria-label="Search transactions">
                 <select id="transactionCategoryFilter" aria-label="Filter by category">
@@ -628,19 +570,30 @@ button:focus-visible,input:focus-visible,select:focus-visible{
                 </select>
             </div>
 
-            <div id="transactionsList">
-
-                <div class="list-item">
-
-                    No transactions.
-
-                </div>
-
-            </div>
-
+            <div id="transactionsList"><p class="empty-state">Loading transactions…</p></div>
         </div>
+    </section>
 
-    </div>
+    <section id="panel-budgets" role="tabpanel" aria-labelledby="tab-budgets" tabindex="0" hidden>
+        <div class="card">
+            <div class="section-header">
+                <div><h2>📋 Budget categories</h2><p>See what’s left in each monthly category.</p></div>
+                <button type="button" class="action-btn" onclick="showAddBudgetModal()">＋ Add budget</button>
+            </div>
+            <div id="budgetList"><p class="empty-state">Loading budget categories…</p></div>
+        </div>
+    </section>
+
+    <section id="panel-transfers" role="tabpanel" aria-labelledby="tab-transfers" tabindex="0" hidden>
+        <div class="card">
+            <div class="section-header">
+                <div><h2>🔄 Transfers</h2><p>Move funds between your accounts.</p></div>
+                <button type="button" class="action-btn" onclick="showTransferModal()">＋ Make a transfer</button>
+            </div>
+            <p class="form-hint">Transfers update both account balances together. They are not listed as income or spending.</p>
+        </div>
+    </section>
+    </main>
 
 </div>
 
@@ -680,7 +633,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{
    
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="seshat-core.js"></script>
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
     
 </body>
 </html>

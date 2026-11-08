@@ -17,6 +17,7 @@ function setup(initialSession = null) {
           disabled: false,
           style: {},
           classList: { toggle() {} },
+          setAttribute() {},
           replaceChildren() {},
           addEventListener(type, handler) { this[type] = handler; }
         });

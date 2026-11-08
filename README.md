@@ -8,6 +8,8 @@ in the URL. Signing out of Money also signs out the shared Hub session in that
 browser. Private browsing or a different device requires a separate sign-in.
 
 Monthly income and spending include transactions dated this month through today.
+The Dashboard tab summarizes the month; use the Accounts, Transactions,
+Budgets, and Transfers tabs to manage each area.
 Each budget category shows its monthly limit, expenses so far, and remaining
 amount (or how far it is over budget). The limit itself is not changed: adding,
 editing, or deleting an expense recalculates the balance, and a new month starts
