@@ -44,21 +44,38 @@ function getCurrentMonthStart(date = new Date()) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
+function categoryKey(value) {
+    return String(value || "").trim().toLocaleLowerCase();
+}
+
+function calculateCategoryBudgets(budgets, monthTransactions) {
+    const categories = new Map();
+    budgets.forEach(budget => {
+        const key = categoryKey(budget.category_name);
+        if (!key) return;
+        if (!categories.has(key)) {
+            categories.set(key, { name: budget.category_name.trim(), limit: 0, spent: 0 });
+        }
+        categories.get(key).limit += Math.max(Number(budget.monthly_budget) || 0, 0);
+    });
+    monthTransactions.forEach(transaction => {
+        const category = categories.get(categoryKey(transaction.category));
+        if (category) category.spent += Math.abs(Math.min(Number(transaction.amount) || 0, 0));
+    });
+    return [...categories.values()].map(category => ({
+        ...category,
+        remaining: category.limit - category.spent
+    }));
+}
+
 function calculateMonthlyTotals(monthTransactions, budgets) {
     const income = monthTransactions.reduce((sum, item) =>
         sum + Math.max(Number(item.amount) || 0, 0), 0);
     const spending = monthTransactions.reduce((sum, item) =>
         sum + Math.abs(Math.min(Number(item.amount) || 0, 0)), 0);
-    const budgetCategories = new Set(budgets.map(item =>
-        String(item.category_name || "").trim().toLocaleLowerCase()));
-    const budgetedSpending = monthTransactions.reduce((sum, item) => {
-        const category = String(item.category || "").trim().toLocaleLowerCase();
-        return budgetCategories.has(category)
-            ? sum + Math.abs(Math.min(Number(item.amount) || 0, 0))
-            : sum;
-    }, 0);
-    const totalBudget = budgets.reduce((sum, item) =>
-        sum + Math.max(Number(item.monthly_budget) || 0, 0), 0);
+    const categories = calculateCategoryBudgets(budgets, monthTransactions);
+    const budgetedSpending = categories.reduce((sum, category) => sum + category.spent, 0);
+    const totalBudget = categories.reduce((sum, category) => sum + category.limit, 0);
     return {
         income,
         spending,
@@ -436,10 +453,15 @@ async function getAccountOptions(selectedId) {
     ).join("");
 }
 
-function transactionFormMarkup(accounts, transaction = null) {
+function transactionFormMarkup(accounts, transaction = null, budgetCategories = []) {
     const amount = transaction ? Math.abs(Number(transaction.amount) || 0) : "";
     const selectedCategory = transaction?.category || TRANSACTION_CATEGORIES[0];
-    const categories = [...new Set([...TRANSACTION_CATEGORIES, selectedCategory])];
+    const categoriesByKey = new Map();
+    [selectedCategory, ...budgetCategories, ...TRANSACTION_CATEGORIES].forEach(category => {
+        const key = categoryKey(category);
+        if (key && !categoriesByKey.has(key)) categoriesByKey.set(key, category.trim());
+    });
+    const categories = [...categoriesByKey.values()];
     return `
         <label for="transactionDescription">Description</label>
         <input id="transactionDescription" maxlength="120" value="${escapeHTML(transaction?.description || "")}" placeholder="e.g. Grocery shopping">
@@ -452,7 +474,7 @@ function transactionFormMarkup(accounts, transaction = null) {
         </div>
         <label for="transactionCategory">Category</label>
         <select id="transactionCategory">${categories.map(item =>
-            `<option ${item === selectedCategory ? "selected" : ""}>${escapeHTML(item)}</option>`
+            `<option ${categoryKey(item) === categoryKey(selectedCategory) ? "selected" : ""}>${escapeHTML(item)}</option>`
         ).join("")}</select>
         <label for="transactionAccount">Account</label>
         <select id="transactionAccount">${accounts}</select>
@@ -464,7 +486,8 @@ function transactionFormMarkup(accounts, transaction = null) {
 
 async function showAddTransactionModal() {
     try {
-        openModal("💳 Add Transaction", transactionFormMarkup(await getAccountOptions()));
+        const [accounts, budgetCategories] = await Promise.all([getAccountOptions(), getBudgetCategoryNames()]);
+        openModal("💳 Add Transaction", transactionFormMarkup(accounts, null, budgetCategories));
     } catch (error) {
         showError(error);
     }
@@ -472,8 +495,11 @@ async function showAddTransactionModal() {
 
 async function showEditTransactionModal(transaction) {
     try {
+        const [accounts, budgetCategories] = await Promise.all([
+            getAccountOptions(transaction.account_id), getBudgetCategoryNames()
+        ]);
         openModal("✏️ Edit Transaction", transactionFormMarkup(
-            await getAccountOptions(transaction.account_id), transaction
+            accounts, transaction, budgetCategories
         ));
     } catch (error) {
         showError(error);
@@ -558,6 +584,17 @@ function showAddBudgetModal() {
     `);
 }
 
+async function getBudgetCategoryNames() {
+    const user = await getCurrentUser();
+    if (!user) throw new Error("Authentication required.");
+    const { data, error } = await getSB().from("budget_categories")
+        .select("category_name")
+        .eq("user_id", user.id)
+        .order("category_name");
+    if (error) throw error;
+    return (data || []).map(category => category.category_name).filter(Boolean);
+}
+
 async function saveBudgetCategory() {
     try {
         const user = await getCurrentUser();
@@ -567,6 +604,10 @@ async function saveBudgetCategory() {
         const monthlyBudget = Number(amountInput);
         if (!categoryName) throw new Error("Enter a category name.");
         if (!Number.isFinite(monthlyBudget) || monthlyBudget < 0) throw new Error("Enter a valid monthly budget.");
+        const existing = await getBudgetCategoryNames();
+        if (existing.some(name => categoryKey(name) === categoryKey(categoryName))) {
+            throw new Error("A budget category with that name already exists.");
+        }
         const { error } = await getSB().from("budget_categories").insert({
             user_id: user.id,
             category_name: categoryName,
@@ -584,30 +625,45 @@ async function loadBudgetCategories() {
     const revision = authRevision;
     const user = await getCurrentUser();
     if (!user) return;
-    const { data, error } = await getSB().from("budget_categories")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("category_name");
-    if (error) throw error;
+    const [budgetResult, transactionResult] = await Promise.all([
+        getSB().from("budget_categories")
+            .select("category_name,monthly_budget")
+            .eq("user_id", user.id)
+            .order("category_name"),
+        getSB().from("money_transactions")
+            .select("amount,category")
+            .eq("user_id", user.id)
+            .gte("transaction_date", getCurrentMonthStart())
+            .lte("transaction_date", localDate())
+    ]);
+    if (budgetResult.error) throw budgetResult.error;
+    if (transactionResult.error) throw transactionResult.error;
     if (revision !== authRevision) return;
 
     const container = document.getElementById("budgetList");
     container.replaceChildren();
-    if (!data?.length) {
+    const categories = calculateCategoryBudgets(budgetResult.data || [], transactionResult.data || []);
+    if (!categories.length) {
         const empty = document.createElement("p");
         empty.className = "empty-state";
         empty.textContent = "No budget categories. Add one to see how spending compares with your plan.";
         container.appendChild(empty);
         return;
     }
-    data.forEach(category => {
+    categories.forEach(category => {
         const item = document.createElement("article");
         item.className = "list-item budget-item";
         const name = document.createElement("strong");
-        name.textContent = category.category_name;
-        const amount = document.createElement("span");
-        amount.textContent = currency(category.monthly_budget);
-        item.append(name, amount);
+        name.textContent = category.name;
+        const details = document.createElement("span");
+        details.className = "budget-details";
+        details.textContent = `${currency(category.spent)} spent of ${currency(category.limit)} planned`;
+        const remaining = document.createElement("strong");
+        remaining.className = category.remaining < 0 ? "amount-negative" : "budget-remaining";
+        remaining.textContent = category.remaining < 0
+            ? `${currency(-category.remaining)} over budget`
+            : `${currency(category.remaining)} remaining`;
+        item.append(name, details, remaining);
         container.appendChild(item);
     });
 }
