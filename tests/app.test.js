@@ -129,6 +129,122 @@ test("transfer and transaction writes use atomic database functions", async () =
   assert.equal(calls[1].args.p_transaction_id, null);
 });
 
+test("account editing preserves the signed balance and sends the expected prior balance", async () => {
+  const { context, document, alerts } = loadApp();
+  const calls = [];
+  context.window.seshat.supabase = {
+    rpc: async (name, args) => { calls.push({ name, args }); return { error: null }; }
+  };
+  context.refreshDashboard = async () => {};
+  context.showEditAccountModal({ id: 2, name: "Visa <main>", type: "Credit Card", balance: -100 });
+  assert.match(document.getElementById("modalContent").innerHTML, /Visa &lt;main&gt;/);
+  for (const [id, value] of Object.entries({
+    editAccountName: " Visa ", editAccountType: "Credit Card", editAccountBalance: "-75.50"
+  })) document.getElementById(id).value = value;
+  await context.saveAccountEdit();
+  assert.equal(calls[0].name, "update_money_account");
+  assert.equal(calls[0].args.p_balance, -75.5);
+  assert.equal(calls[0].args.p_expected_balance, -100);
+  assert.equal(calls[0].args.p_name, "Visa");
+  assert.equal(alerts.length, 0);
+});
+
+test("account edits reject invalid money and surface stale-balance errors", async () => {
+  const { context, document, alerts } = loadApp();
+  let calls = 0;
+  context.window.seshat.supabase = {
+    rpc: async () => { calls++; return { error: new Error("The account balance changed. Refresh the dashboard and try again.") }; }
+  };
+  context.showEditAccountModal({ id: 1, name: "Bank", type: "Checking", balance: 12 });
+  for (const [id, value] of Object.entries({
+    editAccountName: "Bank", editAccountType: "Checking", editAccountBalance: "1.001"
+  })) document.getElementById(id).value = value;
+  await context.saveAccountEdit();
+  assert.equal(calls, 0);
+  assert.match(alerts[0], /two decimal places/);
+  document.getElementById("editAccountBalance").value = "10";
+  await context.saveAccountEdit();
+  assert.equal(calls, 1);
+  assert.match(alerts[1], /balance changed/);
+  assert.equal(document.getElementById("modalOverlay").style.display, "flex");
+});
+
+test("duplicate transfer submissions are ignored while the first is in flight", async () => {
+  const { context, document } = loadApp();
+  let release;
+  let calls = 0;
+  context.window.seshat.supabase = {
+    rpc: () => { calls++; return new Promise(resolve => { release = resolve; }); }
+  };
+  context.refreshDashboard = async () => {};
+  for (const [id, value] of Object.entries({ fromAccount: "1", toAccount: "2", transferAmount: "5" })) {
+    document.getElementById(id).value = value;
+  }
+  const pending = context.saveTransfer();
+  await context.saveTransfer();
+  assert.equal(calls, 1);
+  release({ error: null });
+  await pending;
+});
+
+test("activity history renders account snapshots as text with transfer direction", () => {
+  const { context, document } = loadApp();
+  function element() {
+    return {
+      children: [], textContent: "",
+      append(...children) { this.children.push(...children); },
+      appendChild(child) { this.children.push(child); },
+      replaceChildren() { this.children = []; }
+    };
+  }
+  const list = element();
+  document.createElement = element;
+  const getElementById = document.getElementById;
+  document.getElementById = id => id === "transferHistory" ? list : getElementById(id);
+  context.renderActivity("transferHistory", [{
+    kind: "transfer", description: "Transfer", amount: 20,
+    occurred_at: "2026-01-01T12:00:00Z",
+    accounts: [
+      { name: "<Chequing>", role: "source", before: 100, after: 80 },
+      { name: "Visa", role: "destination", before: -40, after: -20 }
+    ]
+  }]);
+  const parts = list.children[0].children.map(child => child.textContent);
+  assert.equal(parts[0], "Transfer");
+  assert.match(parts[2], /From <Chequing>:.*100\.00.*80\.00/);
+  assert.match(parts[3], /To Visa:.*40\.00.*20\.00/);
+});
+
+test("activity loads every page and separates transfers from other account changes", async () => {
+  const { context } = loadApp();
+  const pages = [];
+  const rendered = [];
+  const firstPage = Array.from({ length: 500 }, (_, id) => ({ id, kind: "transfer" }));
+  context.window.seshat.supabase = {
+    auth: { getUser: async () => ({ data: { user: { id: "user-1" } }, error: null }) },
+    from: table => {
+      assert.equal(table, "money_activity");
+      const query = {
+        select() { return this; },
+        eq(field, value) { assert.equal(field, "user_id"); assert.equal(value, "user-1"); return this; },
+        order() { return this; },
+        range: async (start, end) => {
+          pages.push([start, end]);
+          return { data: start === 0 ? firstPage : [{ id: 501, kind: "adjustment" }], error: null };
+        }
+      };
+      return query;
+    }
+  };
+  context.renderActivity = (id, items) => rendered.push({ id, count: items.length });
+  await context.loadActivity();
+  assert.deepEqual(pages, [[0, 499], [500, 999]]);
+  assert.deepEqual(rendered, [
+    { id: "activityList", count: 1 },
+    { id: "transferHistory", count: 500 }
+  ]);
+});
+
 test("category budgets combine matching names and deduct expenses only", () => {
   const { context } = loadApp();
   const budgets = [

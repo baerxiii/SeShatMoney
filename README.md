@@ -19,10 +19,26 @@ deduct from a budget, and future-dated expenses are included when their date
 arrives. Budget categories are available in the transaction form. Transactions
 can also be searched and filtered by category or month.
 
+Use Edit on an account to change its name, type, or current balance. Enter a
+negative balance for money owed, including credit cards. A balance adjustment
+does not create income or spending. If the balance changed since the edit form
+was opened, refresh and reopen it before adjusting.
+
+The Transfers tab shows transfer history; the Transactions tab shows account
+activity for transaction creation, edits and deletions, and balance adjustments.
+Each entry records the affected accounts' balances before and after the change,
+at the time it was made. A transaction edit that moves accounts shows both.
+History begins after the database update is installed; earlier balances cannot
+be reconstructed reliably. Account names are recorded at the time of each
+change. History is private to the signed-in user but is not a tamper-proof audit
+log. Direct database changes or older clients do not create history entries.
+
 ## Database setup
 
-Run `database/money-transaction-functions.sql` in the Supabase SQL Editor. It
-adds authenticated, row-level-security-respecting database functions that apply
-transfers and transaction create/edit/delete balance changes atomically. Until
-the functions are installed, those actions return a database error rather than
-partially updating balances.
+Run the updated `database/money-transaction-functions.sql` in the Supabase SQL
+Editor before deploying this version, including when a previous version was
+already installed. It creates the activity table and adds authenticated,
+row-level-security-respecting functions that record transfers, balance
+adjustments, and transaction create/edit/delete balance changes atomically.
+The update does not modify existing balances or backfill history. Until it is
+installed, the new history and account-edit features return a database error.
