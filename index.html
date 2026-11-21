@@ -733,7 +733,7 @@ const ACCOUNT_TYPES = [
     "Loan", "Mortgage", "Investment", "Cash"
 ];
 const TRANSACTION_CATEGORIES = [
-    "Groceries", "Fuel", "Dining", "Utilities", "Insurance",
+    "Rent", "Groceries", "Fuel", "Dining", "Utilities", "Insurance",
     "Entertainment", "Debt Payment", "Savings", "Other"
 ];
 let transactions = [];
@@ -1297,7 +1297,7 @@ function transactionFormMarkup(accounts, transaction = null, budgetCategories = 
     const categories = [...categoriesByKey.values()];
     return `
         <label for="transactionDescription">Description</label>
-        <input id="transactionDescription" maxlength="120" value="${escapeHTML(transaction?.description || "")}" placeholder="e.g. Grocery shopping">
+        <input id="transactionDescription" maxlength="120" value="${escapeHTML(transaction?.description || "")}" placeholder="e.g. Monthly rent or groceries">
         <div class="form-row">
             <div><label for="transactionAmount">Amount</label><input id="transactionAmount" type="number" min="0.01" step="0.01" value="${escapeHTML(amount)}" placeholder="0.00"></div>
             <div><label for="transactionType">Type</label><select id="transactionType">
@@ -1476,7 +1476,7 @@ function renderActivity(containerId, items) {
 function showAddBudgetModal() {
     openModal("📋 Add Budget Category", `
         <label for="budgetName">Category name</label>
-        <input id="budgetName" maxlength="80" placeholder="e.g. Groceries">
+        <input id="budgetName" maxlength="80" placeholder="e.g. Rent or Groceries">
         <label for="budgetAmount">Monthly budget</label>
         <input id="budgetAmount" type="number" min="0" step="0.01" placeholder="0.00">
         <div class="modal-actions"><button class="btn" onclick="saveBudgetCategory()">Save category</button></div>
@@ -1575,7 +1575,6 @@ function syncReportFilterOptions() {
     const selectedPeriod = periodSelect.value;
     const selectedCategory = categorySelect.value;
 
-    // Collect distinct YYYY-MM months from expenses (and include current month)
     const monthsSet = new Set([getCurrentMonthStart().slice(0, 7)]);
     allReportTransactions.forEach(tx => {
         if (Number(tx.amount) < 0) {
@@ -1596,8 +1595,11 @@ function syncReportFilterOptions() {
     const validPeriodValues = [...periodSelect.options].map(opt => opt.value);
     periodSelect.value = validPeriodValues.includes(selectedPeriod) ? selectedPeriod : "month";
 
-    // Collect distinct category names
     const catByKey = new Map();
+    TRANSACTION_CATEGORIES.forEach(cat => {
+        const key = categoryKey(cat);
+        if (!catByKey.has(key)) catByKey.set(key, cat);
+    });
     allReportTransactions.forEach(tx => {
         const label = String(tx.category || "").trim() || "Uncategorized";
         const key = categoryKey(label);
